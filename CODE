@@ -1,0 +1,90 @@
+
+
+from controller import Robot
+
+
+def getDistance(sensor):
+    """
+    Return the distance of an obstacle for a sensor.
+    The value returned by the getValue() method of the distance sensors
+    corresponds to a physical value (here we have a sonar, so it is the
+    strength of the sonar ray). This function makes a conversion to a
+    distance value in meters.
+    """
+    return ((1000 - sensor.getValue()) / 1000) * 5
+
+
+# Maximum speed for the velocity value of the wheels.
+robotspeed = 5.24
+
+# Get pointer to the robot.
+robot = Robot()
+
+# Get the time step of the current world.
+timestep = int(robot.getBasicTimeStep())
+
+# Get pointer to the robot wheels motors.
+leftWheel = robot.getMotor('left wheel')
+rightWheel = robot.getMotor('right wheel')
+
+# We will use the velocity parameter of the wheels, so we need to
+# set the target position to infinity.
+leftWheel.setPosition(float('inf'))
+rightWheel.setPosition(float('inf'))
+
+# Get and enable the distance sensors.
+forwardS = robot.getDistanceSensor("so4")
+forwardS.enable(timestep)
+frontS = robot.getDistanceSensor("so3")
+frontS.enable(timestep)
+frontSideS = robot.getDistanceSensor("so1")
+frontSideS.enable(timestep)
+sideS = robot.getDistanceSensor("so0")
+sideS.enable(timestep)
+backS = robot.getDistanceSensor("so15")
+backS.enable(timestep)
+
+# Move forward until we are 50 cm away from the wall.
+leftWheel.setVelocity(robotspeed)
+rightWheel.setVelocity(robotspeed)
+while robot.step(timestep) != -1:
+    if getDistance(forwardS) < 0.5:
+        break
+
+# Rotate clockwise until the wall is to our left.
+leftWheel.setVelocity(robotspeed)
+rightWheel.setVelocity(-robotspeed)
+while robot.step(timestep) != -1:
+    # Rotate until there is a wall to our left, and nothing in front of us.
+    if getDistance(backS) < 1:
+        break
+
+# Main loop.
+while robot.step(timestep) != -1:
+
+    # Too close to the wall, we need to turn right.
+   
+    if ((getDistance(sideS) < 0.2)or(getDistance(backS) > 0.25)):
+        leftWheel.setVelocity(robotspeed)
+        rightWheel.setVelocity(robotspeed * 0.75)
+
+    # Too far from the wall, we need to turn left.
+    elif ((getDistance(sideS) > 0.25)or(getDistance(backS) < 0.2)):
+        leftWheel.setVelocity(robotspeed * 0.75)
+        rightWheel.setVelocity(robotspeed)
+    else:
+        leftWheel.setVelocity(robotspeed)
+        rightWheel.setVelocity(robotspeed)
+    
+   #if the wall gets too close to the side of the robot
+    if((getDistance(frontSideS) < 0.25)or(getDistance(frontS) < 0.25)):
+        leftWheel.setVelocity(robotspeed)
+        rightWheel.setVelocity(-robotspeed)
+    #if the wall gets too close to the diagonal of the robot turn with the wall.
+    if (getDistance(sideS) > 0.3)and(getDistance(frontSideS) > 0.75):#front left is diagonal so the distance from the wall is greater
+        leftWheel.setVelocity(robotspeed * 0.4)
+        rightWheel.setVelocity(robotspeed)
+    #the wall gets too close to the front of the robot turn in place.
+    if (getDistance(frontS) < 0.35) or (getDistance(forwardS) < 0.35):
+        leftWheel.setVelocity(robotspeed)
+        rightWheel.setVelocity(-robotspeed)
